@@ -1,0 +1,14 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: codeshame
+      POSTGRES_PASSWORD: devpassword
+      POSTGRES_DB: codeshame
+    ports:
+      - "5433:5432"
+    volumes:
+      - codeshame_data:/var/lib/postgresql/data
+
+volumes:
+  codeshame_data:
