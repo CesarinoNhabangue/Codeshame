@@ -32,11 +32,6 @@ Nos bastidores, o CodeShame utiliza tecnologias modernas do ecossistema front-en
 
 1. **Clone o repositório:**
 
-   ```bash
-   git clone https://github.com/danitsdev/CodeShame
-   cd codeshame
-   ```
-
 2. **Instale as dependências:**
 
    ```bash
