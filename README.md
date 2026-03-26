@@ -33,7 +33,7 @@ Nos bastidores, o CodeShame utiliza tecnologias modernas do ecossistema front-en
 1. **Clone o repositório:**
 
    ```bash
-   git clone https://github.com/danitsdev/CodeShame
+   git clone https://github.com/CesarinoNhabangue/CodeShame
    cd codeshame
    ```
 
@@ -41,6 +41,8 @@ Nos bastidores, o CodeShame utiliza tecnologias modernas do ecossistema front-en
 
    ```bash
    pnpm install
+   # No PowerShell do Windows, se houver erro de ExecutionPolicy:
+   pnpm.cmd install
    ```
 
 3. **Suba o Banco de Dados:**
@@ -62,11 +64,16 @@ Nos bastidores, o CodeShame utiliza tecnologias modernas do ecossistema front-en
    ```bash
    pnpm run db:push
    pnpm run db:seed
+   # No PowerShell do Windows, use pnpm.cmd se necessário:
+   pnpm.cmd run db:push
+   pnpm.cmd run db:seed
    ```
 
 6. **Inicie o servidor de desenvolvimento:**
    ```bash
-   pnpm run dev ou pnpm.cmd run dev
+   pnpm run dev
+   # No PowerShell do Windows, se houver erro de ExecutionPolicy:
+   pnpm.cmd run dev
    ```
    Acesse `http://localhost:3000` no seu navegador.
 
@@ -96,6 +103,9 @@ Localmente (na sua máquina), mude o `DATABASE_URL` no seu `.env` para a URL do 
 ```bash
 pnpm run db:push
 pnpm run db:seed
+# No PowerShell do Windows, use pnpm.cmd se necessário:
+pnpm.cmd run db:push
+pnpm.cmd run db:seed
 ```
 
 Isso criará as tabelas e adicionará o Leaderboard inicial direto no seu banco de produção! (Lembre-se de retornar sua `.env` local para o localhost depois disso).

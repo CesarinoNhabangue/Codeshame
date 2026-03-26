@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { BundledLanguage } from "shiki";
 import { ShareRoastModal } from "@/components/share-roast-modal";
@@ -7,6 +8,8 @@ import {
   AnalysisCardRoot,
   AnalysisCardTitle,
 } from "@/components/ui/analysis-card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   CodeBlockContent,
   CodeBlockFileName,
@@ -17,6 +20,33 @@ import { DiffLine } from "@/components/ui/diff-line";
 import { ScoreRing } from "@/components/ui/score-ring";
 import { LANGUAGES } from "@/lib/languages";
 import { caller } from "@/trpc/server";
+
+function getSeverityVariant(score: number) {
+  if (score >= 7) {
+    return {
+      badge: "not_that_bad",
+      dotClass: "bg-accent-green",
+      textClass: "text-accent-green",
+      accentVariant: "good" as const,
+    };
+  }
+
+  if (score >= 4) {
+    return {
+      badge: "could_be_worse",
+      dotClass: "bg-accent-amber",
+      textClass: "text-accent-amber",
+      accentVariant: "warning" as const,
+    };
+  }
+
+  return {
+    badge: "needs_serious_help",
+    dotClass: "bg-accent-red",
+    textClass: "text-accent-red",
+    accentVariant: "critical" as const,
+  };
+}
 
 export default async function RoastResults({
   params,
@@ -35,6 +65,7 @@ export default async function RoastResults({
       fixedCode: string | null;
       summary: string;
       language: string;
+      isPublic: boolean;
     };
     issues: {
       id: string;
@@ -43,6 +74,7 @@ export default async function RoastResults({
       description: string;
     }[];
   };
+
   try {
     result = await caller.roast.getBySlug({ slug });
   } catch {
@@ -50,63 +82,101 @@ export default async function RoastResults({
   }
 
   const { roast, issues } = result;
+  const score = Number.parseFloat(roast.score);
+  const verdict = getSeverityVariant(score);
   const codeLines = roast.code.split("\n");
   const fixedCodeLines = roast.fixedCode ? roast.fixedCode.split("\n") : [];
-
-  let severityBadge = "needs_serious_help";
-  let severityColor = "bg-accent-red";
-  let severityText = "text-accent-red";
-
-  if (Number.parseFloat(roast.score) >= 7) {
-    severityBadge = "not_that_bad";
-    severityColor = "bg-accent-green";
-    severityText = "text-accent-green";
-  } else if (Number.parseFloat(roast.score) >= 4) {
-    severityBadge = "could_be_worse";
-    severityColor = "bg-accent-amber";
-    severityText = "text-accent-amber";
-  }
-
   const fileExt =
     LANGUAGES[roast.language as keyof typeof LANGUAGES]?.ext || "txt";
+  const languageName =
+    LANGUAGES[roast.language as keyof typeof LANGUAGES]?.name || roast.language;
+  const linesDelta = fixedCodeLines.length - codeLines.length;
 
   return (
-    <main className="flex min-h-screen flex-col items-center pt-12 pb-8 px-4 sm:pt-28 sm:pb-12 sm:px-10 md:px-20 bg-bg-page">
-      <div className="flex flex-col w-full max-w-[1280px] gap-8 sm:gap-10 z-10 relative">
-        {/* Score Hero */}
-        <section className="flex flex-col sm:flex-row items-center sm:items-start gap-2 sm:gap-12 w-full">
-          <ScoreRing
-            score={Number.parseFloat(roast.score)}
-            size={160}
-            className="scale-75 -my-4 sm:my-0 sm:scale-100 origin-center sm:origin-left"
-          />
+    <main className="flex min-h-screen flex-col items-center bg-bg-page px-4 pt-12 pb-8 sm:px-10 sm:pt-28 sm:pb-12 md:px-20">
+      <div className="relative z-10 flex w-full max-w-[1280px] flex-col gap-8 sm:gap-10">
+        <section className="grid grid-cols-1 gap-6 rounded-2xl border border-border-primary/70 bg-bg-surface/80 p-5 sm:grid-cols-[auto,1fr] sm:gap-10 sm:p-8">
+          <div className="flex flex-col items-center gap-4 sm:items-start">
+            <ScoreRing score={score} size={160} className="origin-center" />
+            <Badge variant={verdict.accentVariant}>
+              {roast.isPublic ? "public roast" : "private review"}
+            </Badge>
+          </div>
 
-          <div className="flex flex-col gap-4 flex-1 text-center sm:text-left w-full">
-            <div className="flex items-center justify-center sm:justify-start gap-2">
-              <span className={`w-2 h-2 rounded-full ${severityColor}`} />
-              <span
-                className={`${severityText} font-mono text-[13px] font-medium`}
-              >
-                verdict: {severityBadge}
-              </span>
+          <div className="flex flex-col gap-5">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2">
+                <span className={`h-2 w-2 rounded-full ${verdict.dotClass}`} />
+                <span
+                  className={`${verdict.textClass} font-mono text-[13px] font-medium`}
+                >
+                  verdict: {verdict.badge}
+                </span>
+              </div>
+              <Badge variant="default">{languageName}</Badge>
+              <Badge variant="default">{codeLines.length} lines</Badge>
+              <Badge variant="default">{issues.length} focus points</Badge>
             </div>
 
-            <h1 className="font-mono text-xl sm:text-2xl text-text-primary leading-relaxed">
+            <h1 className="font-mono text-xl leading-relaxed text-text-primary sm:text-2xl">
               "{roast.summary}"
             </h1>
 
-            <div className="flex flex-col sm:flex-row items-center justify-between mt-2 gap-6 sm:gap-0 w-full">
-              <div className="flex items-center justify-center sm:justify-start gap-4">
-                <span className="text-text-tertiary font-mono text-xs">
-                  lang:{" "}
-                  {LANGUAGES[roast.language as keyof typeof LANGUAGES]?.name ||
-                    roast.language}
-                </span>
-                <span className="text-text-tertiary font-mono text-xs">·</span>
-                <span className="text-text-tertiary font-mono text-xs">
-                  {codeLines.length} lines
-                </span>
+            <p className="max-w-3xl text-sm leading-relaxed text-text-secondary">
+              Here is the breakdown of what hurt your score, plus a cleaned-up
+              version you can use as a starting point. If the roast feels fair,
+              share it. If it feels unfair, paste better code next time.
+            </p>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="rounded-md border border-border-primary/60 bg-bg-page/60 p-4">
+                <p className="mb-1 font-mono text-xs text-text-tertiary">
+                  score
+                </p>
+                <p className="font-mono text-2xl text-text-primary">
+                  {score.toFixed(1)}
+                  <span className="text-sm text-text-tertiary"> / 10</span>
+                </p>
               </div>
+
+              <div className="rounded-md border border-border-primary/60 bg-bg-page/60 p-4">
+                <p className="mb-1 font-mono text-xs text-text-tertiary">
+                  fixed output
+                </p>
+                <p className="font-mono text-2xl text-text-primary">
+                  {fixedCodeLines.length || codeLines.length}
+                  <span className="text-sm text-text-tertiary"> lines</span>
+                </p>
+              </div>
+
+              <div className="rounded-md border border-border-primary/60 bg-bg-page/60 p-4">
+                <p className="mb-1 font-mono text-xs text-text-tertiary">
+                  line delta
+                </p>
+                <p className="font-mono text-2xl text-text-primary">
+                  {linesDelta > 0 ? `+${linesDelta}` : linesDelta}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Link href="/" className="w-full sm:w-auto">
+                <Button
+                  variant="primary"
+                  className="h-12 w-full px-6 sm:h-10 sm:w-auto"
+                >
+                  $ analyze_another
+                </Button>
+              </Link>
+
+              <Link href="/leaderboard" className="w-full sm:w-auto">
+                <Button
+                  variant="secondary"
+                  className="h-12 w-full px-6 sm:h-10 sm:w-auto"
+                >
+                  $ inspect_leaderboard
+                </Button>
+              </Link>
 
               <div className="w-full sm:w-auto">
                 <ShareRoastModal slug={slug} />
@@ -115,15 +185,46 @@ export default async function RoastResults({
           </div>
         </section>
 
+        <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <div className="rounded-md border border-border-primary/60 bg-bg-surface p-5">
+            <p className="mb-2 font-mono text-xs text-accent-green">
+              {"// summary"}
+            </p>
+            <p className="text-sm leading-relaxed text-text-secondary">
+              Your strongest next move is to fix the highest-severity issue
+              first, then compare the cleanup against the original before
+              shipping anything.
+            </p>
+          </div>
+          <div className="rounded-md border border-border-primary/60 bg-bg-surface p-5">
+            <p className="mb-2 font-mono text-xs text-accent-amber">
+              {"// sharing"}
+            </p>
+            <p className="text-sm leading-relaxed text-text-secondary">
+              Public roasts can land in the leaderboard. Private reviews stay
+              out of it and are better for real code you do not want exposed.
+            </p>
+          </div>
+          <div className="rounded-md border border-border-primary/60 bg-bg-surface p-5">
+            <p className="mb-2 font-mono text-xs text-accent-red">
+              {"// compare"}
+            </p>
+            <p className="text-sm leading-relaxed text-text-secondary">
+              Use the original and fixed blocks below to spot naming, logic, and
+              structure changes quickly instead of reading the whole thing
+              twice.
+            </p>
+          </div>
+        </section>
+
         <div className="h-px w-full bg-border-primary" />
 
-        {/* Submitted Code Section */}
         <section className="flex flex-col gap-4">
           <div className="flex items-center gap-2">
-            <span className="text-accent-green font-mono text-[13px] font-bold">
+            <span className="font-mono text-[13px] font-bold text-accent-green">
               {"//"}
             </span>
-            <span className="text-text-primary font-mono text-[13px] font-bold">
+            <span className="font-mono text-[13px] font-bold text-text-primary">
               your_submission
             </span>
           </div>
@@ -142,26 +243,25 @@ export default async function RoastResults({
           </CodeBlockRoot>
         </section>
 
-        {issues.length > 0 && (
+        {issues.length > 0 ? (
           <>
             <div className="h-px w-full bg-border-primary" />
 
-            {/* Analysis Section */}
             <section className="flex flex-col gap-6">
               <div className="flex items-center gap-2">
-                <span className="text-accent-green font-mono text-[13px] font-bold">
+                <span className="font-mono text-[13px] font-bold text-accent-green">
                   {"//"}
                 </span>
-                <span className="text-text-primary font-mono text-[13px] font-bold">
+                <span className="font-mono text-[13px] font-bold text-text-primary">
                   detailed_analysis
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
                 {issues.map((issue) => (
                   <AnalysisCardRoot
                     key={issue.id}
-                    className="p-5 flex flex-col gap-3"
+                    className="flex flex-col gap-3 p-5"
                   >
                     <AnalysisCardHeader className="p-0">
                       <div className="flex items-center gap-2">
@@ -169,17 +269,23 @@ export default async function RoastResults({
                           className={
                             issue.severity === "error"
                               ? "text-accent-red"
-                              : "text-accent-amber"
+                              : issue.severity === "warning"
+                                ? "text-accent-amber"
+                                : "text-accent-green"
                           }
                         >
-                          {issue.severity === "error" ? "!" : "?"}
+                          {issue.severity === "error"
+                            ? "!"
+                            : issue.severity === "warning"
+                              ? "?"
+                              : "+"}
                         </span>
                         <AnalysisCardTitle className="font-mono text-[13px] font-medium text-text-primary">
                           {issue.title}
                         </AnalysisCardTitle>
                       </div>
                     </AnalysisCardHeader>
-                    <AnalysisCardContent className="p-0 text-xs font-sans text-text-secondary leading-relaxed">
+                    <AnalysisCardContent className="p-0 text-xs leading-relaxed text-text-secondary">
                       {issue.description}
                     </AnalysisCardContent>
                   </AnalysisCardRoot>
@@ -187,19 +293,24 @@ export default async function RoastResults({
               </div>
             </section>
           </>
-        )}
+        ) : null}
 
         <div className="h-px w-full bg-border-primary" />
 
-        {/* Diff Section */}
         <section className="flex flex-col gap-6">
-          <div className="flex items-center gap-2">
-            <span className="text-accent-green font-mono text-[13px] font-bold">
-              {"//"}
-            </span>
-            <span className="text-text-primary font-mono text-[13px] font-bold">
-              suggested_fix
-            </span>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-[13px] font-bold text-accent-green">
+                {"//"}
+              </span>
+              <span className="font-mono text-[13px] font-bold text-text-primary">
+                suggested_fix
+              </span>
+            </div>
+            <p className="font-mono text-xs text-text-tertiary">
+              original: {codeLines.length} lines · fixed:{" "}
+              {fixedCodeLines.length || codeLines.length} lines
+            </p>
           </div>
 
           <CodeBlockRoot>
@@ -208,7 +319,7 @@ export default async function RoastResults({
                 {roast.title}_fixed.{fileExt}
               </CodeBlockFileName>
             </CodeBlockHeader>
-            <div className="flex flex-col py-2 max-h-[500px] overflow-auto [tab-size:2]">
+            <div className="flex max-h-[500px] flex-col overflow-auto py-2 [tab-size:2]">
               {fixedCodeLines.length > 0 ? (
                 fixedCodeLines.map((line, i) => (
                   <DiffLine key={String(i)} type="added" code={line} />

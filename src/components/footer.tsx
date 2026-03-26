@@ -4,7 +4,7 @@ export function Footer() {
   return (
     <footer className="w-full py-10 mt-auto flex justify-center">
       <Link
-        href="https://github.com/danitsdev"
+        href="https://github.com/CesarinoNhabangue"
         target="_blank"
         rel="noopener noreferrer"
         className="group flex items-center gap-1.5 grayscale opacity-60 hover:grayscale-0 hover:opacity-100 transition-all duration-300"
@@ -13,7 +13,7 @@ export function Footer() {
           created by
         </span>
         <span className="text-text-primary font-mono text-[11px] font-bold border-b border-transparent group-hover:border-accent-green transition-all">
-          danitsdev
+          Cesarino Jr
         </span>
       </Link>
     </footer>
