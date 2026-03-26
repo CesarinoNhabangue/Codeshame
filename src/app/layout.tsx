@@ -12,17 +12,25 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CodeShame",
-  description: "Shame my code",
+  title: {
+    default: "CodeShame | AI Code Roasts and Shareable Reviews",
+    template: "%s | CodeShame",
+  },
+  description:
+    "Paste your code, get a score, uncover the ugliest issues, and share the roast with a playful AI-powered review flow.",
   openGraph: {
     type: "website",
     locale: "en_US",
     siteName: "CodeShame",
+    title: "CodeShame | AI Code Roasts and Shareable Reviews",
+    description:
+      "AI-powered code reviews with scores, fixes, leaderboard chaos, and shareable roast pages.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "CodeShame",
-    description: "Shame my code",
+    title: "CodeShame | AI Code Roasts and Shareable Reviews",
+    description:
+      "AI-powered code reviews with scores, fixes, leaderboard chaos, and shareable roast pages.",
   },
 };
 

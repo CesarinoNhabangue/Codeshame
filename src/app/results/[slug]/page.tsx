@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { BundledLanguage } from "shiki";
@@ -20,6 +21,26 @@ import { DiffLine } from "@/components/ui/diff-line";
 import { ScoreRing } from "@/components/ui/score-ring";
 import { LANGUAGES } from "@/lib/languages";
 import { caller } from "@/trpc/server";
+
+type RoastResult = {
+  roast: {
+    id: string;
+    slug: string;
+    title: string;
+    score: string;
+    code: string;
+    fixedCode: string | null;
+    summary: string;
+    language: string;
+    isPublic: boolean;
+  };
+  issues: {
+    id: string;
+    severity: string | null;
+    title: string;
+    description: string;
+  }[];
+};
 
 function getSeverityVariant(score: number) {
   if (score >= 7) {
@@ -48,6 +69,55 @@ function getSeverityVariant(score: number) {
   };
 }
 
+async function getRoastResult(slug: string): Promise<RoastResult> {
+  return caller.roast.getBySlug({ slug });
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+
+  try {
+    const { roast } = await getRoastResult(slug);
+    const languageName =
+      LANGUAGES[roast.language as keyof typeof LANGUAGES]?.name ||
+      roast.language;
+    const score = Number.parseFloat(roast.score).toFixed(1);
+    const title = `${roast.title} scored ${score}/10`;
+    const description = `${roast.summary} Review the ${languageName} submission, inspect the issues, and compare the AI-suggested fix.`;
+    const imageUrl = `/results/${slug}/opengraph-image`;
+
+    return {
+      title,
+      description,
+      openGraph: {
+        title,
+        description,
+        type: "article",
+        images: [{ url: imageUrl, width: 1200, height: 630, alt: title }],
+      },
+      twitter: {
+        card: "summary_large_image",
+        title,
+        description,
+        images: [imageUrl],
+      },
+    };
+  } catch {
+    return {
+      title: "Roast not found",
+      description: "This CodeShame result could not be found.",
+      robots: {
+        index: false,
+        follow: false,
+      },
+    };
+  }
+}
+
 export default async function RoastResults({
   params,
 }: {
@@ -55,28 +125,10 @@ export default async function RoastResults({
 }) {
   const { slug } = await params;
 
-  let result: {
-    roast: {
-      id: string;
-      slug: string;
-      title: string;
-      score: string;
-      code: string;
-      fixedCode: string | null;
-      summary: string;
-      language: string;
-      isPublic: boolean;
-    };
-    issues: {
-      id: string;
-      severity: string | null;
-      title: string;
-      description: string;
-    }[];
-  };
+  let result: RoastResult;
 
   try {
-    result = await caller.roast.getBySlug({ slug });
+    result = await getRoastResult(slug);
   } catch {
     notFound();
   }
